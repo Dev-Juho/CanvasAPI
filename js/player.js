@@ -2,19 +2,22 @@ class Player {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.x = 50;
-        this.y = canvas.height - 100;
+        this.x = config.player.x;
+        this.y = canvas.height * config.player.groundLevel - config.player.height;
         this.width = config.player.width;
         this.height = config.player.height;
         this.speed = config.player.speed;
         this.jumping = false;
-        this.jumpForce = 15;
+        this.crouching = false;
+        this.jumpForce = config.player.jumpForce;
         this.velocityY = 0;
         this.wood = 0;
+        this.health = config.player.health; // Added for bear collisions
         this.image = new Image();
         this.image.src = 'assets/suomalainen.png';
         this.facingRight = true;
-        this.groundY = canvas.height - 100;
+        this.groundY = canvas.height * config.player.groundLevel;
+        this.layers = config.layers;
     }
 
     draw() {
@@ -40,12 +43,23 @@ class Player {
     }
 
     update(deltaTime) {
+        this.groundY = this.canvas.height * config.player.groundLevel;
+
+        if (this.crouching) {
+            this.height = config.player.crouchHeight;
+            this.y = this.groundY - this.height;
+            this.jumping = false;
+            this.velocityY = 0;
+        } else {
+            this.height = config.player.height;
+        }
+
         if (this.jumping) {
             this.velocityY += config.player.gravity;
             this.y += this.velocityY;
 
-            if (this.y >= this.groundY) {
-                this.y = this.groundY;
+            if (this.y >= this.groundY - this.height) {
+                this.y = this.groundY - this.height;
                 this.jumping = false;
                 this.velocityY = 0;
             }
@@ -53,23 +67,46 @@ class Player {
     }
 
     jump() {
-        if (!this.jumping) {
+        if (!this.jumping && !this.crouching) {
             this.jumping = true;
             this.velocityY = -this.jumpForce;
         }
     }
 
     moveLeft() {
-        this.x = Math.max(0, this.x - this.speed);
         this.facingRight = false;
+        this.layers.forEach(layer => {
+            layer.x += this.speed * layer.speed;
+            if (layer.width > 0) {
+                if (layer.x > layer.width) {
+                    layer.x -= layer.width * 2;
+                }
+            }
+        });
     }
 
     moveRight() {
-        this.x = Math.min(this.canvas.width - this.width, this.x + this.speed);
         this.facingRight = true;
+        this.layers.forEach(layer => {
+            layer.x -= this.speed * layer.speed;
+            if (layer.width > 0) {
+                if (layer.x < -layer.width) {
+                    layer.x += layer.width * 2;
+                }
+            }
+        });
+    }
+
+    crouch(state) {
+        this.crouching = state;
     }
 
     stop() {
-        // Ei tarvita mitään toimintoa pysähtymisessä
+        // No action needed
     }
-} 
+
+    takeDamage(amount) { // Added for bear collisions
+        this.health -= amount;
+        if (this.health < 0) this.health = 0;
+    }
+}
