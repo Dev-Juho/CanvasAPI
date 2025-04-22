@@ -3,7 +3,7 @@ class Tree {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.x = x;
-        this.y = canvas.height - 150;
+        this.y = canvas.height * config.player.groundLevel - config.tree.height; // Align with ground
         this.width = config.tree.width;
         this.height = config.tree.height;
         this.health = config.tree.health;
@@ -55,4 +55,4 @@ class Tree {
         this.isBeingChopped = false;
         this.chopTimer = 0;
     }
-} 
+}

@@ -2,8 +2,8 @@ class Bear {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.x = canvas.width;                     
-        this.y = canvas.height - 100;
+        this.x = canvas.width * 0.75; // Start at 75% of canvas width
+        this.y = canvas.height * config.player.groundLevel - config.bear.height; // Align with ground
         this.width = config.bear.width;
         this.height = config.bear.height;
         this.speed = config.bear.speed;
@@ -35,9 +35,13 @@ class Bear {
     }
 
     update() {
-        this.x -= this.speed;
-        if (this.x < -this.width) {
-            this.x = this.canvas.width;
+        // Move toward player (x: 50)
+        if (this.x > config.player.x + config.player.width) {
+            this.x -= this.speed;
+            this.facingRight = false;
+        } else if (this.x < config.player.x - this.width) {
+            this.x += this.speed;
+            this.facingRight = true;
         }
     }
 
@@ -47,4 +51,4 @@ class Bear {
                player.y < this.y + this.height &&
                player.y + player.height > this.y;
     }
-} 
+}
