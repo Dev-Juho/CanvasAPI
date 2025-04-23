@@ -12,12 +12,14 @@ class Player {
         this.jumpForce = config.player.jumpForce;
         this.velocityY = 0;
         this.wood = 0;
-        this.health = config.player.health; // Added for bear collisions
+        this.health = config.player.health; 
         this.image = new Image();
         this.image.src = 'assets/suomalainen.png';
         this.facingRight = true;
         this.groundY = canvas.height * config.player.groundLevel;
         this.layers = config.layers;
+        
+        this.jumpSound = new Audio('assets/pomppu.mp3');
     }
 
     draw() {
@@ -70,6 +72,9 @@ class Player {
         if (!this.jumping && !this.crouching) {
             this.jumping = true;
             this.velocityY = -this.jumpForce;
+            this.height = config.player.height; 
+            this.jumpSound.currentTime = 0; 
+            this.jumpSound.play();
         }
     }
 
@@ -102,10 +107,9 @@ class Player {
     }
 
     stop() {
-        // No action needed
     }
 
-    takeDamage(amount) { // Added for bear collisions
+    takeDamage(amount) { 
         this.health -= amount;
         if (this.health < 0) this.health = 0;
     }

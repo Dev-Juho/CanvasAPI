@@ -10,11 +10,11 @@ const config = {
         height: 48,
         crouchHeight: 24,
         speed: 5,
-        jumpForce: 12,
+        jumpForce: 15,
         gravity: 0.5,
         x: 50,
         groundLevel: 0.9,
-        health: 100 // Added for bear collisions
+        health: 1
     },
     tree: {
         width: 40,

@@ -1,7 +1,6 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Canvas resizing
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -9,7 +8,7 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
 
-// Initialize game objects
+// peli objektiem alustus
 const player = new Player(canvas);
 const inputHandler = new InputHandler(player);
 const trees = [
@@ -24,7 +23,6 @@ let score = 0;
 let woodCount = 0;
 let lastTime = 0;
 
-// Initialize parallax layers
 config.layers.forEach(layer => {
     layer.image = new Image();
     layer.image.src = layer.src;
@@ -33,7 +31,6 @@ config.layers.forEach(layer => {
     layer.height = 0;
 });
 
-// Input handling for tree chopping
 document.addEventListener('keydown', (e) => {
     if (e.key === 'f') {
         trees.forEach(tree => {
@@ -57,16 +54,43 @@ function drawUI() {
     ctx.font = '20px Arial';
     ctx.fillText(`Puuta: ${woodCount}`, 10, 30);
     ctx.fillText(`Pisteet: ${score}`, 10, 60);
-    ctx.fillText(`Elämä: ${player.health}`, 10, 90); // Added health display
+    ctx.fillText(`Elämä: ${player.health}`, 10, 90);
+}
+
+function resetGame() {
+    player.health = config.player.health;
+    player.x = config.player.x;
+    player.y = canvas.height * config.player.groundLevel - config.player.height;
+    player.jumping = false;
+    player.crouching = false;
+    player.velocityY = 0;
+    player.wood = 0;
+
+    score = 0;
+    woodCount = 0;
+
+    bears.length = 0;
+    bears.push(new Bear(canvas));
+
+    trees.length = 0;
+    trees.push(
+        new Tree(canvas, canvas.width * 0.25),
+        new Tree(canvas, canvas.width * 0.5),
+        new Tree(canvas, canvas.width * 0.75)
+    );
+
+    gameState = 'forest';
 }
 
 function gameLoop(timestamp) {
-    const deltaTime = (timestamp - lastTime) / 1000;
+    const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw parallax layers
+    player.update(deltaTime);
+    inputHandler.update();
+    
     config.layers.forEach(layer => {
         if (layer.width > 0 && layer.image.complete) {
             const drawY = (canvas.height - layer.height) / 2;
@@ -76,8 +100,22 @@ function gameLoop(timestamp) {
         }
     });
 
+    bears.forEach(bear => {
+        bear.update();
+        bear.draw();
+        if (bear.isJumpedOver(player)) {
+            score += 1; // pisteen lisäys, nyt 1
+        }
+        if (bear.isHit(player)) {
+            player.takeDamage(1); // voisiko tämän koko jutun optimisoda?
+            if (player.health <= 0) {
+                gameState = 'gameover';
+                setTimeout(resetGame, 2000);
+            }
+        }
+    });
+
     if (gameState === 'forest') {
-        // Draw and update trees
         trees.forEach((tree, index) => {
             tree.draw();
             if (tree.update(deltaTime)) {
@@ -86,37 +124,22 @@ function gameLoop(timestamp) {
                 score += 10;
             }
         });
-
-        // Draw and update bears
-        bears.forEach(bear => {
-            bear.draw();
-            bear.update();
-            if (bear.isHit(player)) {
-                player.takeDamage(10); // Reduce health by 10
-                score -= 20; // Reduce score by 20
-                if (score < 0) score = 0;
-                bear.x = canvas.width * 0.75; // Reset bear position
-            }
-        });
-
-        // Check for game over
-        if (player.health <= 0) {
-            console.log('Game Over!');
-            gameState = 'gameover'; // Stop updates
-        }
     }
 
     if (gameState !== 'gameover') {
-        inputHandler.update();
         player.draw();
-        player.update(deltaTime);
         drawUI();
+    } else {
+        ctx.fillStyle = 'black';
+        ctx.font = '48px Arial';
+        ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
+        ctx.font = '24px Arial';
+        ctx.fillText('Game starts again in 2 seconds...', canvas.width / 2 - 150, canvas.height / 2 + 40);
     }
 
     requestAnimationFrame(gameLoop);
 }
 
-// Wait for layer images to load before starting
 let loadedImages = 0;
 config.layers.forEach(layer => {
     layer.image.onload = () => {
