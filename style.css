@@ -6,9 +6,10 @@ body {
     align-items: center;
     min-height: 100vh;
     background-color: #f0f0f0;
+    overflow: hidden;
 }
 
 canvas {
     border: 2px solid #333;
     background-color: #fff;
-} 
+}
