@@ -22,6 +22,7 @@ class Player {
         this.attackTimer = 0;
         this.opacity = 1;
         this.jumpID = new Set();
+        this.isDead = false;
 
         this.jumpSound = document.getElementById('jumpSound');
         this.attackSound = document.getElementById('attackSound');
@@ -130,15 +131,16 @@ class Player {
         }
     }
 
-    takeDamage(amount, score) {
+    takeDamage(amount) {
         const now = Date.now();
         if (now - this.lastHitByBear >= 1000) {
             this.health -= amount;
-            score -= 20;
             this.lastHitByBear = now;
-            if (this.health < 0) this.health = 0;
-            if (score < 0) score = 0;
+            if (this.health <= 0) {
+                this.health = 0;
+                this.isDead = true;
+                resetGame();
+            }
         }
-        return score;
     }
 }

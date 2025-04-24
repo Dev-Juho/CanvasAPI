@@ -39,26 +39,24 @@ class Projectile {
 
 const player = new Player(canvas);
 const inputHandler = new InputHandler(player, canvas);
-const trees = [
-    new Tree(canvas, canvas.width * 0.25),
-    new Tree(canvas, canvas.width * 0.5, true),
-    new Tree(canvas, canvas.width * 0.75)
-];
-const bears = [new Bear(canvas)];
-const projectiles = [];
-<<<<<<< HEAD
-let brokenTrees = 0;
+let trees = [];
+let bears = [];
+let moose = [];
+let projectiles = [];
+let brokenTrees = [];
 let lastRestoreTime = 0;
 const RESTORE_INTERVAL = 5000;
-=======
->>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
+
+for (let i = 0; i < 5; i++) {
+    trees.push(new Tree(canvas));
+}
 
 let gameState = 'forest';
 let score = 0;
 let woodCount = 0;
 let lastTime = 0;
 let bearSpawnTimer = 0;
-let chopStreak = 0;
+let mooseSpawnTimer = 0;
 let lastChopTime = 0;
 
 config.layers.forEach(layer => {
@@ -70,17 +68,17 @@ config.layers.forEach(layer => {
 });
 
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'f') {
+    if (e.key.toLowerCase() === 'f') {
         trees.forEach(tree => {
             if (tree.isHit(player)) {
-                tree.startChopping();
+                tree.startChopping(player);
             }
         });
     }
 });
 
 document.addEventListener('keyup', (e) => {
-    if (e.key === 'f') {
+    if (e.key.toLowerCase() === 'f') {
         trees.forEach(tree => {
             tree.stopChopping();
         });
@@ -93,7 +91,6 @@ function drawUI() {
     ctx.fillText(`Puuta: ${woodCount}`, 10, 30);
     ctx.fillText(`Pisteet: ${score}`, 10, 60);
     ctx.fillText(`Elämä: ${player.health}`, 10, 90);
-    ctx.fillText(`Chop Streak: ${chopStreak}`, 10, 120);
 }
 
 function resetGame() {
@@ -104,57 +101,49 @@ function resetGame() {
     player.crouching = false;
     player.velocityY = 0;
     player.velocityX = 0;
-    player.wood = 0;
-    player.jumpID.clear();
+    player.isDead = false;
 
     score = 0;
     woodCount = 0;
-    chopStreak = 0;
     lastChopTime = 0;
 
     bears.length = 0;
     bears.push(new Bear(canvas));
+    
+    moose.length = 0;
+    moose.push(new Moose(canvas));
 
     trees.length = 0;
-    trees.push(
-        new Tree(canvas, canvas.width * 0.25),
-        new Tree(canvas, canvas.width * 0.5, true),
-        new Tree(canvas, canvas.width * 0.75)
-    );
+    for (let i = 0; i < 5; i++) {
+        trees.push(new Tree(canvas));
+    }
 
     projectiles.length = 0;
     inputHandler.cameraX = 0;
     bearSpawnTimer = 0;
+    mooseSpawnTimer = 0;
 
     gameState = 'forest';
 }
 
 function spawnTree() {
-    const x = canvas.width * (config.tree.minSpawnX + Math.random() * (config.tree.maxSpawnX - config.tree.minSpawnX));
-    const isOak = Math.random() < 0.3;
-    trees.push(new Tree(canvas, x, isOak));
-}
-
-<<<<<<< HEAD
-function restoreTree() {
-    const currentTime = Date.now();
-    if (currentTime - lastRestoreTime < RESTORE_INTERVAL) {
-        return;
-    }
-
-    for (let tree of trees) {
-        if (tree.isBroken) {
-            tree.restore();
-            brokenTrees--;
-            lastRestoreTime = currentTime;
-            break;
-        }
+    const minX = inputHandler.cameraX + canvas.width;
+    const maxX = inputHandler.cameraX + canvas.width * 2;
+    
+    if (trees.length > 0) {
+        const lastTree = trees.reduce((max, tree) => tree.x > max.x ? tree : max, trees[0]);
+        const tree = new Tree(canvas);
+        tree.x = Math.max(lastTree.x + 800, minX);
+        trees.push(tree);
+    } else {
+        const tree = new Tree(canvas);
+        tree.x = minX;
+        trees.push(tree);
     }
 }
 
-=======
->>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
 function gameLoop(timestamp) {
+    if (!lastTime) lastTime = timestamp;
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
 
@@ -166,120 +155,86 @@ function gameLoop(timestamp) {
     config.layers.forEach(layer => {
         if (layer.width > 0 && layer.image.complete) {
             const drawY = (canvas.height - layer.height) / 2;
-            let layerX = layer.x - inputHandler.cameraX * layer.speed;
-            while (layerX > layer.width) layerX -= layer.width * 2;
-            while (layerX < -layer.width) layerX += layer.width * 2;
-            ctx.drawImage(layer.image, layerX, drawY, layer.width, layer.height);
-            ctx.drawImage(layer.image, layerX + layer.width, drawY, layer.width, layer.height);
-            ctx.drawImage(layer.image, layerX - layer.width, drawY, layer.width, layer.height);
+            
+            let layerX = -(inputHandler.cameraX * layer.speed) % layer.width;
+            if (layerX > 0) layerX -= layer.width;
+
+            let currentX = layerX;
+            while (currentX < canvas.width) {
+                ctx.drawImage(layer.image, currentX, drawY, layer.width, layer.height);
+                currentX += layer.width;
+            }
         }
     });
 
-    bearSpawnTimer += deltaTime / 1000;
-    if (bearSpawnTimer >= config.bear.spawnInterval && bears.length < config.bear.maxBears) {
-        bears.push(new Bear(canvas));
-        bearSpawnTimer = 0;
+    for (let i = trees.length - 1; i >= 0; i--) {
+        const tree = trees[i];
+        tree.update(deltaTime);
+        tree.draw(inputHandler.cameraX);
+        
+        if (tree.x < inputHandler.cameraX - canvas.width) {
+            trees.splice(i, 1);
+        }
     }
 
-    bears.forEach((bear, index) => {
-        bear.update(deltaTime);
+    if (trees.length === 0 || trees[trees.length - 1].x < inputHandler.cameraX + canvas.width * 1.5) {
+        spawnTree();
+    }
+
+    for (let i = bears.length - 1; i >= 0; i--) {
+        const bear = bears[i];
+        bear.update(deltaTime, player);
         bear.draw(inputHandler.cameraX);
-        if (bear.isJumpedOver(player)) {
-            score += config.player.jumpOverPoints;
-            bear.isFleeing = true;
-            bear.direction = 1;
-            bear.facingRight = true;
+        
+        if (bear.isHit(player)) {
+            player.takeDamage(config.bear.damage);
         }
-        if (bear.x > canvas.width * 2 && bear.isFleeing) {
-            bears.splice(index, 1);
-            return;
+        
+        if (bear.x < inputHandler.cameraX - canvas.width) {
+            bears.splice(i, 1);
         }
-        if (bear.isHit(player) && !bear.isFleeing && !player.jumpID.size) {
-            score = player.takeDamage(10, score);
-            if (player.health <= 0) {
-                gameState = 'gameover';
-                setTimeout(resetGame, 2000);
-            }
-        }
-    });
-
-    projectiles.forEach((projectile, pIndex) => {
-        projectile.update(deltaTime);
-        projectile.draw(inputHandler.cameraX);
-        if (projectile.lifetime <= 0) {
-            projectiles.splice(pIndex, 1);
-            return;
-        }
-        bears.forEach((bear, bIndex) => {
-            if (projectile.isHit(bear)) {
-                bears.splice(bIndex, 1);
-                projectiles.splice(pIndex, 1);
-                score += 50;
-                try {
-                    const bearHitSound = document.getElementById('bearHitSound');
-                    bearHitSound.currentTime = 0;
-                    bearHitSound.play();
-                } catch (e) {
-                    console.warn('Bear hit sound failed:', e);
-                }
-            }
-        });
-    });
-
-    if (gameState === 'forest') {
-<<<<<<< HEAD
-        for (let i = trees.length - 1; i >= 0; i--) {
-            const tree = trees[i];
-            tree.draw(inputHandler.cameraX);
-            if (tree.update(deltaTime)) {
-                brokenTrees++;
-                woodCount += 1;
-                chopStreak++;
-                score += chopStreak * 10;
-            }
-        }
-
-        if (brokenTrees > 0) {
-            restoreTree();
-        }
-=======
-        trees.forEach((tree, index) => {
-            tree.draw(inputHandler.cameraX);
-            if (tree.update(deltaTime)) {
-                trees.splice(index, 1);
-                woodCount += 1;
-                const now = timestamp / 1000;
-                if (now - lastChopTime <= config.score.chopInterval) {
-                    chopStreak++;
-                } else {
-                    chopStreak = 1;
-                }
-                lastChopTime = now;
-                const multiplier = config.score.multipliers[Math.min(chopStreak - 1, config.score.multipliers.length - 1)];
-                score += 10 * multiplier;
-                if (trees.length < 3) {
-                    spawnTree();
-                }
-            }
-        });
->>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
     }
 
-    if (gameState !== 'gameover') {
-        player.draw(inputHandler.cameraX);
-        drawUI();
-    } else {
-        ctx.fillStyle = 'black';
-        ctx.font = '48px Arial';
-        ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
-        ctx.font = '24px Arial';
-        ctx.fillText('Game starts again in 2 seconds...', canvas.width / 2 - 150, canvas.height / 2 + 40);
+    if (bears.length < config.bear.maxBears) {
+        if (bears.length === 0 || bears[bears.length - 1].x < inputHandler.cameraX + canvas.width * 1.5) {
+            const bear = new Bear(canvas);
+            if (bears.length === 0) {
+                bear.x = inputHandler.cameraX + canvas.width * 1.2;
+            } else {
+                bear.x = bears[bears.length - 1].x + 1200;
+            }
+            bears.push(bear);
+        }
     }
 
-    if (player.attackTimer > 0 && projectiles.length === 0) {
-        const projectileY = player.y + player.height / 2 - config.projectile.height / 2;
-        projectiles.push(new Projectile(player.x, projectileY, player.facingRight));
+    for (let i = moose.length - 1; i >= 0; i--) {
+        const m = moose[i];
+        m.update(deltaTime, player);
+        m.draw(inputHandler.cameraX);
+        
+        if (m.isHit(player)) {
+            player.takeDamage(config.moose.damage);
+        }
+        
+        if (m.x < inputHandler.cameraX - canvas.width) {
+            moose.splice(i, 1);
+        }
     }
+
+    if (moose.length < config.moose.maxMoose) {
+        if (moose.length === 0 || moose[moose.length - 1].x < inputHandler.cameraX + canvas.width * 1.5) {
+            const newMoose = new Moose(canvas);
+            if (moose.length === 0) {
+                newMoose.x = inputHandler.cameraX + canvas.width * 1.5;
+            } else {
+                newMoose.x = moose[moose.length - 1].x + 1500;
+            }
+            moose.push(newMoose);
+        }
+    }
+
+    player.draw(inputHandler.cameraX);
+    drawUI();
 
     requestAnimationFrame(gameLoop);
 }
@@ -298,3 +253,4 @@ config.layers.forEach(layer => {
         console.error(`Failed to load image: ${layer.src}`);
     };
 });
+
