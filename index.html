@@ -7,17 +7,18 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <canvas id="gameCanvas"></canvas>
+    <canvas id="gameCanvas">Your browser does not support canvas.</canvas>
     <audio id="jumpSound" src="assets/pomppu.mp3" preload="auto"></audio>
     <audio id="chopSound" src="assets/chop.mp3" preload="auto"></audio>
     <audio id="attackSound" src="assets/attack.mp3" preload="auto"></audio>
     <audio id="bearHitSound" src="assets/bear_hit.mp3" preload="auto"></audio>
-    <script src="js/config.js"></script>
-    <script src="js/player.js"></script>
-    <script src="js/tree.js"></script>
-    <script src="js/bear.js"></script>
-    <script src="js/moose.js"></script>
-    <script src="js/input.js"></script>
-    <script src="js/game.js"></script>
+    <audio id="mooseHitSound" src="assets/moose_hit.mp3" preload="auto"></audio>
+    <script src="js/config.js" onerror="console.warn('Script failed: config.js')"></script>
+    <script src="js/player.js" onerror="console.warn('Script failed: player.js')"></script>
+    <script src="js/tree.js" onerror="console.warn('Script failed: tree.js')"></script>
+    <script src="js/bear.js" onerror="console.warn('Script failed: bear.js')"></script>
+    <script src="js/moose.js" onerror="console.warn('Script failed: moose.js')"></script>
+    <script src="js/input.js" onerror="console.warn('Script failed: input.js')"></script>
+    <script src="js/game.js" onerror="console.warn('Script failed: game.js')"></script>
 </body>
 </html>
