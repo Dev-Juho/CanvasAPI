@@ -10,21 +10,40 @@ const config = {
         height: 48,
         crouchHeight: 24,
         speed: 5,
-        jumpForce: 12,
+        jumpForce: 15,
         gravity: 0.5,
         x: 50,
         groundLevel: 0.9,
-        health: 100 // Added for bear collisions
+        health: 100,
+        attackDuration: 0.2,
+        jumpOverPoints: 25
     },
     tree: {
         width: 40,
         height: 100,
-        health: 100
+        health: 100,
+        oakHealth: 150,
+        minSpawnX: 0.1,
+        maxSpawnX: 1.9
     },
     bear: {
         width: 60,
         height: 80,
-        speed: 3
+        speed: 2.7,
+        spawnInterval: 10,
+        maxBears: 3,
+        directionChangeInterval: 5,
+        fleeSpeedMultiplier: 2
+    },
+    projectile: {
+        width: 50,
+        height: 20,
+        speed: 10,
+        lifetime: 2
+    },
+    score: {
+        chopInterval: 5,
+        multipliers: [1, 1.5, 2]
     },
     layers: [
         { src: 'assets/layer1.png', speed: 0.1 },
