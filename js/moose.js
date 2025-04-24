@@ -6,80 +6,120 @@ class Moose {
         this.y = canvas.height * config.player.groundLevel - config.moose.height;
         this.width = config.moose.width;
         this.height = config.moose.height;
-        this.speed = config.moose.speed;
+        this.speed = config.moose.speedMin + Math.random() * (config.moose.speedMax - config.moose.speedMin);
         this.image = new Image();
         this.image.src = 'assets/hirvi.png';
+        this.image.onerror = () => console.warn('Failed to load moose image');
         this.facingRight = Math.random() < 0.5;
         this.direction = this.facingRight ? 1 : -1;
-        this.isFleeing = false;
         this.directionTimer = 0;
-        this.jumpIDs = new Set();
         this.chargeTimer = 0;
+        this.chargeDuration = 0;
         this.isCharging = false;
+        this.jumpTimer = 0;
+        this.jumping = false;
+        this.velocityY = 0;
+        this.jumpIDs = new Set();
     }
 
     draw(cameraX) {
-        if (this.image.complete) {
-            if (this.facingRight) {
-                this.ctx.save();
-                this.ctx.scale(-1, 1);
-                this.ctx.drawImage(
-                    this.image,
-                    -this.x + cameraX - this.width, this.y, this.width, this.height
-                );
-                this.ctx.restore();
+        if (!this.ctx) return;
+        try {
+            if (this.image.complete) {
+                if (!this.facingRight) {
+                    this.ctx.save();
+                    this.ctx.scale(-1, 1);
+                    this.ctx.drawImage(
+                        this.image,
+                        -this.x + cameraX - this.width, this.y, this.width, this.height
+                    );
+                    this.ctx.restore();
+                } else {
+                    this.ctx.drawImage(
+                        this.image,
+                        this.x - cameraX, this.y, this.width, this.height
+                    );
+                }
             } else {
-                this.ctx.drawImage(
-                    this.image,
-                    this.x - cameraX, this.y, this.width, this.height
-                );
+                this.ctx.fillStyle = 'brown';
+                this.ctx.fillRect(this.x - cameraX, this.y, this.width, this.height);
             }
-        } else {
-            this.ctx.fillStyle = 'brown';
-            this.ctx.fillRect(this.x - cameraX, this.y, this.width, this.height);
+        } catch (e) {
+            console.warn('Moose draw error:', e);
         }
     }
 
     update(deltaTime, player) {
-        this.chargeTimer += deltaTime / 1000;
-        
-        const distanceToPlayer = Math.abs(this.x - player.x);
-        if (distanceToPlayer < config.moose.chargeDistance && this.chargeTimer >= config.moose.chargeInterval) {
+        if (!this.canvas || !player) return;
+
+        this.directionTimer += deltaTime;
+        this.chargeTimer += deltaTime;
+        this.jumpTimer += deltaTime;
+
+        if (this.directionTimer >= config.moose.directionChangeInterval) {
+            this.direction = Math.random() < 0.5 ? 1 : -1;
+            this.facingRight = this.direction === 1;
+            this.directionTimer = 0;
+        }
+
+        const playerCenterX = player.x + player.width / 2;
+        const mooseCenterX = this.x + this.width / 2;
+        const distance = Math.abs(playerCenterX - mooseCenterX);
+
+        if (this.chargeTimer >= config.moose.chargeInterval && distance < config.moose.chargeDistance && !this.isCharging) {
             this.isCharging = true;
-            this.chargeTimer = 0;
+            this.chargeDuration = 0;
+            this.facingRight = playerCenterX > mooseCenterX;
+            this.direction = this.facingRight ? 1 : -1;
         }
 
-        let currentSpeed = this.speed;
         if (this.isCharging) {
-            currentSpeed = this.speed * config.moose.chargeSpeedMultiplier;
-            if (this.chargeTimer >= config.moose.chargeDuration) {
+            this.chargeDuration += deltaTime;
+            if (this.chargeDuration >= config.moose.chargeDuration) {
                 this.isCharging = false;
+                this.chargeTimer = 0;
+            }
+            this.x += this.speed * config.moose.chargeSpeedMultiplier * this.direction * (deltaTime / 16.67);
+        } else {
+            this.x += this.speed * this.direction * (deltaTime / 16.67);
+        }
+
+        if (this.jumpTimer >= config.moose.jumpInterval && !this.jumping && Math.random() < 0.5) {
+            this.jump();
+        }
+
+        if (this.jumping) {
+            this.velocityY += config.moose.gravity * (deltaTime / 16.67);
+            this.y += this.velocityY * (deltaTime / 16.67);
+            if (this.y >= this.canvas.height * config.player.groundLevel - this.height) {
+                this.y = this.canvas.height * config.player.groundLevel - this.height;
+                this.jumping = false;
+                this.velocityY = 0;
             }
         }
 
-        this.x += currentSpeed * this.direction;
-
-        if (!this.isCharging) {
-            this.directionTimer += deltaTime / 1000;
-            if (this.directionTimer >= config.moose.directionChangeInterval) {
-                this.direction = Math.random() < 0.5 ? 1 : -1;
-                this.facingRight = this.direction === 1;
-                this.directionTimer = 0;
-            }
-        }
-
-        if (this.x < 0) {
-            this.x = 0;
+        if (this.x < inputHandler.cameraX - this.canvas.width) {
+            this.x = inputHandler.cameraX - this.canvas.width;
             this.direction = 1;
             this.facingRight = true;
-        } else if (this.x > this.canvas.width * 2) {
-            this.x = this.canvas.width * 2;
+        } else if (this.x > inputHandler.cameraX + this.canvas.width * 2) {
+            this.x = inputHandler.cameraX + this.canvas.width * 2;
             this.direction = -1;
             this.facingRight = false;
         }
     }
 
+    jump() {
+        try {
+            this.jumping = true;
+            this.velocityY = -config.moose.jumpForce;
+        } catch (e) {
+            console.warn('Moose jump error:', e);
+        }
+    }
+
     isHit(player) {
+        if (!player) return false;
         return player.x < this.x + this.width &&
                player.x + player.width > this.x &&
                player.y + player.height > this.y &&
@@ -87,9 +127,10 @@ class Moose {
     }
 
     isJumpedOver(player) {
-        if (player.jumping && 
-            player.x + player.width > this.x && 
-            player.x < this.x + this.width && 
+        if (!player) return false;
+        if (player.jumping &&
+            player.x + player.width > this.x &&
+            player.x < this.x + this.width &&
             player.y + player.height < this.y) {
             for (let id of player.jumpID) {
                 if (!this.jumpIDs.has(id)) {
@@ -100,4 +141,4 @@ class Moose {
         }
         return false;
     }
-} 
+}
