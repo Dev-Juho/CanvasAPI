@@ -6,17 +6,22 @@ class Tree {
         this.y = canvas.height * config.player.groundLevel - config.tree.height;
         this.width = config.tree.width;
         this.height = config.tree.height;
+<<<<<<< HEAD
         this.maxHealth = isOak ? config.tree.oakHealth : config.tree.health;
         this.health = this.maxHealth;
         this.healthBarWidth = this.width;
         this.healthBarHeight = 15;
         this.healthSegments = 5;  // Terveyspalkki jaetaan 5 osaan
+=======
+        this.health = isOak ? config.tree.oakHealth : config.tree.health;
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
         this.isBeingChopped = false;
         this.chopTimer = 0;
         this.chopInterval = 0.5;
         this.isOak = isOak;
         this.shakeTimer = 0;
         this.chopSound = document.getElementById('chopSound');
+<<<<<<< HEAD
         
         // Hajoamisanimaation ominaisuudet
         this.isFalling = false;
@@ -295,10 +300,27 @@ class Tree {
                 segmentWidth - 4, 
                 this.healthBarHeight - 4
             );
+=======
+    }
+
+    draw(cameraX) {
+        const offsetX = this.shakeTimer > 0 ? Math.sin(this.shakeTimer * 50) * 2 : 0;
+        this.ctx.fillStyle = this.isOak ? 'darkbrown' : 'brown';
+        this.ctx.fillRect(this.x - cameraX + offsetX, this.y, this.width, this.height);
+        this.ctx.fillStyle = this.isOak ? 'darkgreen' : 'green';
+        this.ctx.beginPath();
+        this.ctx.arc(this.x - cameraX + this.width/2 + offsetX, this.y - 20, 30, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        if (this.isBeingChopped) {
+            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            this.ctx.fillRect(this.x - cameraX + offsetX, this.y - 20, this.width, 10);
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
         }
     }
 
     update(deltaTime) {
+<<<<<<< HEAD
         if (this.isBroken) {
             this.rotation += this.rotationSpeed;
             return false;
@@ -343,12 +365,21 @@ class Tree {
                 this.chopTimer = 0;
                 this.health = Math.max(0, this.health - config.tree.damagePerHit);
                 
+=======
+        if (this.isBeingChopped) {
+            this.chopTimer += deltaTime / 1000;
+            this.shakeTimer = 0.2;
+            if (this.chopTimer >= this.chopInterval) {
+                this.chopTimer = 0;
+                this.health -= 20;
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
                 try {
                     this.chopSound.currentTime = 0;
                     this.chopSound.play();
                 } catch (e) {
                     console.warn('Chop sound failed:', e);
                 }
+<<<<<<< HEAD
                 
                 if (this.health <= 0) {
                     this.startFalling();
@@ -404,12 +435,35 @@ class Tree {
             this.isBeingChopped = true;
             this.chopTimer = this.chopInterval; // Aloitetaan heti ensimmäinen isku
         }
+=======
+                if (this.health <= 0) {
+                    return true;
+                }
+            }
+        }
+        if (this.shakeTimer > 0) {
+            this.shakeTimer -= deltaTime / 1000;
+        }
+        return false;
+    }
+
+    isHit(player) {
+        return player.x < this.x + this.width &&
+               player.x + player.width > this.x &&
+               player.y < this.y + this.height &&
+               player.y + player.height > this.y;
+    }
+
+    startChopping() {
+        this.isBeingChopped = true;
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
     }
 
     stopChopping() {
         this.isBeingChopped = false;
         this.chopTimer = 0;
     }
+<<<<<<< HEAD
 
     restore() {
         this.isBroken = false;
@@ -422,4 +476,6 @@ class Tree {
         this.chopTimer = 0;
         this.shakeTimer = 0;
     }
+=======
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
 }

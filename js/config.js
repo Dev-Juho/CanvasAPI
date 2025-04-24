@@ -19,10 +19,16 @@ const config = {
         jumpOverPoints: 25
     },
     tree: {
+<<<<<<< HEAD
         width: 80,
         height: 200,
         health: 100,
         damagePerHit: 20,
+=======
+        width: 40,
+        height: 100,
+        health: 100,
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
         oakHealth: 150,
         minSpawnX: 0.1,
         maxSpawnX: 1.9

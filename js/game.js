@@ -46,9 +46,12 @@ const trees = [
 ];
 const bears = [new Bear(canvas)];
 const projectiles = [];
+<<<<<<< HEAD
 let brokenTrees = 0;
 let lastRestoreTime = 0;
 const RESTORE_INTERVAL = 5000;
+=======
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
 
 let gameState = 'forest';
 let score = 0;
@@ -132,6 +135,7 @@ function spawnTree() {
     trees.push(new Tree(canvas, x, isOak));
 }
 
+<<<<<<< HEAD
 function restoreTree() {
     const currentTime = Date.now();
     if (currentTime - lastRestoreTime < RESTORE_INTERVAL) {
@@ -148,6 +152,8 @@ function restoreTree() {
     }
 }
 
+=======
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
 function gameLoop(timestamp) {
     const deltaTime = timestamp - lastTime;
     lastTime = timestamp;
@@ -221,6 +227,7 @@ function gameLoop(timestamp) {
     });
 
     if (gameState === 'forest') {
+<<<<<<< HEAD
         for (let i = trees.length - 1; i >= 0; i--) {
             const tree = trees[i];
             tree.draw(inputHandler.cameraX);
@@ -235,6 +242,27 @@ function gameLoop(timestamp) {
         if (brokenTrees > 0) {
             restoreTree();
         }
+=======
+        trees.forEach((tree, index) => {
+            tree.draw(inputHandler.cameraX);
+            if (tree.update(deltaTime)) {
+                trees.splice(index, 1);
+                woodCount += 1;
+                const now = timestamp / 1000;
+                if (now - lastChopTime <= config.score.chopInterval) {
+                    chopStreak++;
+                } else {
+                    chopStreak = 1;
+                }
+                lastChopTime = now;
+                const multiplier = config.score.multipliers[Math.min(chopStreak - 1, config.score.multipliers.length - 1)];
+                score += 10 * multiplier;
+                if (trees.length < 3) {
+                    spawnTree();
+                }
+            }
+        });
+>>>>>>> 63138ecc7e6726c10ddae49eef4e0d9aa6592ba7
     }
 
     if (gameState !== 'gameover') {
