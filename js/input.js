@@ -36,7 +36,7 @@ class InputHandler {
             if (this.keys.has('s') || this.keys.has('arrowdown')) {
                 this.player.crouch(true);
             }
-            if (this.keys.has(' ') && !this.keys.has('w') && !this.keys.has('arrowup')) {
+            if (this.keys.has('g')) {
                 this.player.attack();
             }
 
