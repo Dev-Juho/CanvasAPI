@@ -1,70 +1,71 @@
 const config = {
     canvas: {
-        width: window.innerWidth,
-        height: window.innerHeight,
-        fallbackWidth: 800,
-        fallbackHeight: 600
+        width: Math.min(window.innerWidth, 1920),
+        height: Math.min(window.innerHeight, 1080)
     },
     player: {
+        x: 50,
         width: 48,
         height: 48,
         crouchHeight: 24,
-        speed: 5,
+        speed: 4,
         jumpForce: 15,
         gravity: 0.5,
-        x: 50,
-        groundLevel: 0.9,
         health: 100,
         attackDuration: 0.2,
-        jumpOverPoints: 25
-    },
-    tree: {
-        width: 40,
-        height: 100,
-        health: 100,
-        oakHealth: 150,
-        minSpawnX: 0.1,
-        maxSpawnX: 1.9
+        jumpOverPoints: 25,
+        groundLevel: 0.9
     },
     bear: {
-        width: 60,
-        height: 80,
-        speed: 2.7,
-        spawnInterval: 10,
-        maxBears: 3,
-        directionChangeInterval: 5,
-        fleeSpeedMultiplier: 2
+        width: 64,
+        height: 48,
+        speedMin: 2.0,
+        speedMax: 3.5,
+        damage: 20,
+        directionChangeInterval: 3000,
+        minSpawnX: 0.2,
+        maxSpawnX: 0.8,
+        spawnInterval: 3000,
+        maxBears: 5
+    },
+    moose: {
+        width: 100,
+        height: 120,
+        speedMin: 2.0,
+        speedMax: 3.5,
+        damage: 35,
+        chargeDistance: 300,
+        chargeInterval: 2000,
+        chargeDuration: 2500,
+        chargeSpeedMultiplier: 3,
+        directionChangeInterval: 7000,
+        jumpForce: 12,
+        gravity: 0.5,
+        jumpInterval: 3000,
+        spawnInterval: 4000,
+        maxMoose: 4
+    },
+    tree: {
+        width: 50,
+        height: 150,
+        health: 100,
+        damagePerHit: 20,
+        scorePerTree: 25,
+        minSpawnX: 0.2,
+        maxSpawnX: 0.8,
+        minSpacing: 600,
+        maxSpacing: 900
     },
     projectile: {
         width: 50,
-        height: 20,
-        speed: 10,
-        lifetime: 2
+        height: 20
     },
     score: {
-        chopInterval: 5,
-        multipliers: [1, 1.5, 2]
+        woodPerTree: 10,
+        victoryWood: 100
     },
-    layers: [
-        { src: 'assets/layer1.png', speed: 0.1 },
-        { src: 'assets/layer2.png', speed: 0.2 },
-        { src: 'assets/layer3.png', speed: 0.3 },
-        { src: 'assets/layer4.png', speed: 0.4 },
-        { src: 'assets/layer5.png', speed: 0.5 },
-        { src: 'assets/layer6.png', speed: 0.6 },
-        { src: 'assets/layer7.png', speed: 0.7 },
-        { src: 'assets/layer8.png', speed: 0.8 },
-        { src: 'assets/layer9.png', speed: 0.9 },
-        { src: 'assets/layer10.png', speed: 1.0 },
-        { src: 'assets/layer11.png', speed: 1.1 },
-        { src: 'assets/layer12.png', speed: 1.2 },
-        { src: 'assets/layer13.png', speed: 1.3 },
-        { src: 'assets/layer14.png', speed: 1.4 },
-        { src: 'assets/layer15.png', speed: 1.5 },
-        { src: 'assets/layer16.png', speed: 1.6 },
-        { src: 'assets/layer17.png', speed: 1.7 },
-        { src: 'assets/layer18.png', speed: 1.8 },
-        { src: 'assets/layer19.png', speed: 1.9 },
-        { src: 'assets/layer20.png', speed: 2.0 }
-    ]
+    layers: Array.from({ length: 20 }, (_, i) => ({
+        src: `assets/layer${i + 1}.png`,
+        speed: 0.1 + i * 0.05
+    }))
 };

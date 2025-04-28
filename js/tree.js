@@ -1,72 +1,95 @@
 class Tree {
-    constructor(canvas, x, isOak = false) {
+    constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
-        this.x = x;
-        this.y = canvas.height * config.player.groundLevel - config.tree.height;
         this.width = config.tree.width;
         this.height = config.tree.height;
-        this.health = isOak ? config.tree.oakHealth : config.tree.health;
-        this.isBeingChopped = false;
-        this.chopTimer = 0;
-        this.chopInterval = 0.5;
-        this.isOak = isOak;
-        this.shakeTimer = 0;
-        this.chopSound = document.getElementById('chopSound');
+        this.x = Math.random() * (canvas.width * config.tree.maxSpawnX - canvas.width * config.tree.minSpawnX) + canvas.width * config.tree.minSpawnX;
+        this.y = canvas.height * config.player.groundLevel - this.height;
+        this.health = config.tree.health;
+        this.maxHealth = config.tree.health;
+        this.damagePerHit = config.tree.damagePerHit;
+        this.broken = false;
+        this.normalSprite = new Image();
+        this.normalSprite.src = 'assets/tree_sprite_normaali.png';
+        this.normalSprite.onerror = () => console.warn('Failed to load normal tree sprite');
+        this.brokenSprite = new Image();
+        this.brokenSprite.src = 'assets/tree_sprite_rikki.png';
+        this.brokenSprite.onerror = () => console.warn('Failed to load broken tree sprite');
     }
 
     draw(cameraX) {
-        const offsetX = this.shakeTimer > 0 ? Math.sin(this.shakeTimer * 50) * 2 : 0;
-        this.ctx.fillStyle = this.isOak ? 'darkbrown' : 'brown';
-        this.ctx.fillRect(this.x - cameraX + offsetX, this.y, this.width, this.height);
-        this.ctx.fillStyle = this.isOak ? 'darkgreen' : 'green';
-        this.ctx.beginPath();
-        this.ctx.arc(this.x - cameraX + this.width/2 + offsetX, this.y - 20, 30, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        if (this.isBeingChopped) {
-            this.ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-            this.ctx.fillRect(this.x - cameraX + offsetX, this.y - 20, this.width, 10);
+        if (!this.ctx || this.broken) return;
+        try {
+            this.ctx.drawImage(
+                this.normalSprite,
+                this.x - cameraX,
+                this.y,
+                this.width,
+                this.height
+            );
+            this.drawHealthBar(cameraX);
+        } catch (e) {
+            console.warn('Tree draw error:', e);
         }
     }
 
     update(deltaTime) {
-        if (this.isBeingChopped) {
-            this.chopTimer += deltaTime / 1000;
-            this.shakeTimer = 0.2;
-            if (this.chopTimer >= this.chopInterval) {
-                this.chopTimer = 0;
-                this.health -= 20;
-                try {
-                    this.chopSound.currentTime = 0;
-                    this.chopSound.play();
-                } catch (e) {
-                    console.warn('Chop sound failed:', e);
-                }
-                if (this.health <= 0) {
-                    return true;
-                }
-            }
-        }
-        if (this.shakeTimer > 0) {
-            this.shakeTimer -= deltaTime / 1000;
-        }
+        // No respawn or update logic needed
         return false;
     }
 
-    isHit(player) {
-        return player.x < this.x + this.width &&
-               player.x + player.width > this.x &&
-               player.y < this.y + this.height &&
-               player.y + player.height > this.y;
+    takeDamage(amount, player) {
+        if (!this.broken) {
+            this.health -= amount;
+            if (this.health <= 0) {
+                this.health = 0;
+                this.broken = true;
+                if (player) {
+                    woodCount += config.score.woodPerTree;
+                    score += config.tree.scorePerTree;
+                }
+            }
+        }
     }
 
-    startChopping() {
-        this.isBeingChopped = true;
+    drawHealthBar(cameraX) {
+        if (this.broken) return;
+        const barWidth = 50;
+        const barHeight = 5;
+        const x = this.x - cameraX + (this.width - barWidth) / 2;
+        const y = this.y - 10;
+
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(x, y, barWidth, barHeight);
+
+        const healthPercent = this.health / this.maxHealth;
+        this.ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.25 ? '#ffff00' : '#ff0000';
+        this.ctx.fillRect(x, y, barWidth * healthPercent, barHeight);
+    }
+
+    isHit(player) {
+        if (!player) return false;
+        const playerCenterX = player.x + player.width / 2;
+        const treeCenterX = this.x + this.width / 2;
+        const distance = Math.abs(playerCenterX - treeCenterX);
+        return distance < this.width;
+    }
+
+    startChopping(player) {
+        if (!this.broken) {
+            this.takeDamage(this.damagePerHit, player);
+            try {
+                const chopSound = document.getElementById('chopSound');
+                chopSound.currentTime = 0;
+                chopSound.play();
+            } catch (e) {
+                console.warn('Chop sound failed:', e);
+            }
+        }
     }
 
     stopChopping() {
-        this.isBeingChopped = false;
-        this.chopTimer = 0;
+        // No state to reset
     }
 }

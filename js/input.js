@@ -2,54 +2,61 @@ class InputHandler {
     constructor(player, canvas) {
         this.player = player;
         this.canvas = canvas;
-        this.keys = {};
+        this.keys = new Set();
         this.cameraX = 0;
-        this.setupEventListeners();
-    }
+        this.cameraSpeed = 0;
 
-    setupEventListeners() {
         document.addEventListener('keydown', (e) => {
-            this.keys[e.key] = true;
-            
-            if ((e.key === 'ArrowUp' || e.key === 'w') && !this.player.jumping && !this.player.crouching) {
-                this.player.jump();
-            }
-            if (e.key === 'ArrowDown' || e.key === 's') {
-                this.player.crouch(true);
-            }
-            if (e.key === ' ') {
-                this.player.attack();
-            }
+            this.keys.add(e.key.toLowerCase());
         });
 
         document.addEventListener('keyup', (e) => {
-            this.keys[e.key] = false;
-            
-            if (e.key === 'ArrowDown' || e.key === 's') {
-                this.player.crouch(false);
-            }
-            if (!this.keys['ArrowLeft'] && !this.keys['ArrowRight'] && 
-                !this.keys['a'] && !this.keys['d']) {
+            this.keys.delete(e.key.toLowerCase());
+            if (['a', 'd', 'arrowleft', 'arrowright'].includes(e.key.toLowerCase())) {
                 this.player.stop();
+            }
+            if (e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'arrowdown') {
+                this.player.crouch(false);
             }
         });
     }
 
-    update() {
-        if (this.keys['ArrowLeft'] || this.keys['a']) {
-            this.player.moveLeft();
-        }
-        if (this.keys['ArrowRight'] || this.keys['d']) {
-            this.player.moveRight();
-        }
+    update(deltaTime) {
+        if (!this.player || !this.canvas) return;
+        try {
+            if (this.keys.has('a') || this.keys.has('arrowleft')) {
+                this.player.moveLeft();
+            }
+            if (this.keys.has('d') || this.keys.has('arrowright')) {
+                this.player.moveRight();
+            }
+            if ((this.keys.has('w') || this.keys.has('arrowup') || this.keys.has(' ')) && !this.keys.has('s') && !this.keys.has('arrowdown')) {
+                this.player.jump();
+            }
+            if (this.keys.has('s') || this.keys.has('arrowdown')) {
+                this.player.crouch(true);
+            }
+            if (this.keys.has('g')) {
+                this.player.attack();
+            }
 
-        const cameraLeftEdge = this.cameraX + this.canvas.width * 0.25;
-        const cameraRightEdge = this.cameraX + this.canvas.width * 0.75;
-        if (this.player.x < cameraLeftEdge) {
-            this.cameraX = this.player.x - this.canvas.width * 0.25;
-        } else if (this.player.x > cameraRightEdge) {
-            this.cameraX = this.player.x - this.canvas.width * 0.75;
+            const playerCenterX = this.player.x + this.player.width / 2;
+            const canvasCenterX = this.canvas.width / 2;
+            const leftEdge = this.canvas.width * 0.3;
+            const rightEdge = this.canvas.width * 0.7;
+
+            if (playerCenterX < this.cameraX + leftEdge) {
+                this.cameraSpeed = -this.player.speed;
+            } else if (playerCenterX > this.cameraX + rightEdge) {
+                this.cameraSpeed = this.player.speed;
+            } else {
+                this.cameraSpeed = 0;
+            }
+
+            this.cameraX += this.cameraSpeed * (deltaTime / 16.67);
+            if (this.cameraX < 0) this.cameraX = 0;
+        } catch (e) {
+            console.warn('Input handler update error:', e);
         }
-        if (this.cameraX < 0) this.cameraX = 0;
     }
 }

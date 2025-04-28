@@ -1,195 +1,174 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+let player, inputHandler, trees = [], bears = [], moose = [], projectiles = [], woodCount = 0, score = 0
+let lastTime = 0, bearSpawnTimer = 0, mooseSpawnTimer = 0, lastChopTime = 0;
+let gameState = 'gamestart';
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+const startscreen = document.getElementById('startscreen');
+const startbutton = document.getElementById('startbutton');
 
+startbutton.addEventListener('click', () => {
+    gameState = 'forest';
+    flashScreen(() => {
+        startscreen.classList.add('hidden');
+        canvas.classList.remove('hidden');
+        
+        resetGame();
+        requestAnimationFrame(gameLoop);
+    });
+    
+});
 class Projectile {
     constructor(x, y, facingRight) {
         this.x = x;
         this.y = y;
         this.width = config.projectile.width;
         this.height = config.projectile.height;
-        this.speed = config.projectile.speed;
-        this.lifetime = config.projectile.lifetime;
+        this.speed = 10;
+        this.lifetime = 2;
         this.facingRight = facingRight;
     }
-
     update(deltaTime) {
-        this.x += this.speed * (this.facingRight ? 1 : -1);
+        this.x += this.speed * (this.facingRight ? 1 : -1) * (deltaTime / 16.67);
         this.lifetime -= deltaTime / 1000;
     }
-
     draw(cameraX) {
-        ctx.fillStyle = 'red';
-        ctx.fillRect(this.x - cameraX, this.y, this.width, this.height);
+        if (!ctx) return;
+        try {
+            ctx.fillStyle = 'red';
+            ctx.fillRect(this.x - cameraX, this.y, this.width, this.height);
+        } catch (e) {
+            console.warn('Projectile draw error:', e);
+        }
     }
-
-    isHit(bear) {
-        return this.x < bear.x + bear.width &&
-               this.x + this.width > bear.x &&
-               this.y < bear.y + bear.height &&
-               this.y + this.height > bear.y;
+    isHit(entity) {
+        return this.x < entity.x + entity.width &&
+               this.x + this.width > entity.x &&
+               this.y < entity.y + entity.height &&
+               this.y + this.height > entity.y;
     }
 }
 
-const player = new Player(canvas);
-const inputHandler = new InputHandler(player, canvas);
-const trees = [
-    new Tree(canvas, canvas.width * 0.25),
-    new Tree(canvas, canvas.width * 0.5, true),
-    new Tree(canvas, canvas.width * 0.75)
-];
-const bears = [new Bear(canvas)];
-const projectiles = [];
-
-let gameState = 'forest';
-let score = 0;
-let woodCount = 0;
-let lastTime = 0;
-let bearSpawnTimer = 0;
-let chopStreak = 0;
-let lastChopTime = 0;
-
-config.layers.forEach(layer => {
-    layer.image = new Image();
-    layer.image.src = layer.src;
-    layer.x = 0;
-    layer.width = 0;
-    layer.height = 0;
-});
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'f') {
-        trees.forEach(tree => {
-            if (tree.isHit(player)) {
-                tree.startChopping();
-            }
-        });
-    }
-});
-
-document.addEventListener('keyup', (e) => {
-    if (e.key === 'f') {
-        trees.forEach(tree => {
-            tree.stopChopping();
-        });
-    }
-});
+function resizeCanvas() {
+    canvas.width = config.canvas.width;
+    canvas.height = config.canvas.height;
+}
 
 function drawUI() {
-    ctx.fillStyle = 'black';
-    ctx.font = '20px Arial';
-    ctx.fillText(`Puuta: ${woodCount}`, 10, 30);
-    ctx.fillText(`Pisteet: ${score}`, 10, 60);
-    ctx.fillText(`Elämä: ${player.health}`, 10, 90);
-    ctx.fillText(`Chop Streak: ${chopStreak}`, 10, 120);
+    try {
+        ctx.fillStyle = 'black';
+        ctx.font = '20px Arial';
+        ctx.fillText(`Puuta: ${woodCount}`, 10, 30);
+        ctx.fillText(`Pisteet: ${score}`, 10, 60);
+        ctx.fillText(`Elämä: ${player.health}`, 10, 90);
+    } catch (e) {
+        console.warn('UI draw error:', e);
+    }
 }
 
 function resetGame() {
-    player.health = config.player.health;
-    player.x = config.player.x;
-    player.y = canvas.height * config.player.groundLevel - config.player.height;
-    player.jumping = false;
-    player.crouching = false;
-    player.velocityY = 0;
-    player.velocityX = 0;
-    player.wood = 0;
-    player.jumpID.clear();
-
-    score = 0;
-    woodCount = 0;
-    chopStreak = 0;
-    lastChopTime = 0;
-
-    bears.length = 0;
-    bears.push(new Bear(canvas));
-
-    trees.length = 0;
-    trees.push(
-        new Tree(canvas, canvas.width * 0.25),
-        new Tree(canvas, canvas.width * 0.5, true),
-        new Tree(canvas, canvas.width * 0.75)
-    );
-
-    projectiles.length = 0;
-    inputHandler.cameraX = 0;
-    bearSpawnTimer = 0;
-
-    gameState = 'forest';
+    try {
+        player.health = config.player.health;
+        player.x = config.player.x;
+        player.y = canvas.height * config.player.groundLevel - player.height;
+        player.jumping = false;
+        player.crouching = false;
+        player.velocityX = 0;
+        player.velocityY = 0;
+        player.isDead = false;
+        score = 0;
+        woodCount = 0;
+        lastChopTime = 0;
+        bears = [];
+        moose = [];
+        trees = [];
+        projectiles = [];
+        bears.push(new Bear(canvas));
+        moose.push(new Moose(canvas));
+        for (let i = 0; i < 5; i++) spawnTree();
+        inputHandler.cameraX = 0;
+        bearSpawnTimer = 0;
+        mooseSpawnTimer = 0;
+    } catch (e) {
+        console.error('Reset game error:', e);
+    }
 }
 
 function spawnTree() {
-    const x = canvas.width * (config.tree.minSpawnX + Math.random() * (config.tree.maxSpawnX - config.tree.minSpawnX));
-    const isOak = Math.random() < 0.3;
-    trees.push(new Tree(canvas, x, isOak));
+    try {
+        const minX = inputHandler.cameraX + canvas.width * config.tree.minSpawnX;
+        const maxX = inputHandler.cameraX + canvas.width * config.tree.maxSpawnX;
+        if (trees.length > 0) {
+            const lastTree = trees.reduce((max, tree) => tree.x > max.x ? tree : max, trees[0]);
+            const tree = new Tree(canvas);
+            tree.x = Math.max(lastTree.x + config.tree.minSpacing, minX);
+            trees.push(tree);
+        } else {
+            const tree = new Tree(canvas);
+            tree.x = minX + Math.random() * (maxX - minX);
+            trees.push(tree);
+        }
+    } catch (e) {
+        console.warn('Spawn tree error:', e);
+    }
 }
 
 function gameLoop(timestamp) {
-    const deltaTime = timestamp - lastTime;
-    lastTime = timestamp;
+    try {
+        if (!lastTime) lastTime = timestamp;
+        const deltaTime = Math.min(timestamp - lastTime, 100);
+        lastTime = timestamp;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        player.update(deltaTime);
+        inputHandler.update(deltaTime);
 
-    player.update(deltaTime);
-    inputHandler.update();
+        config.layers.forEach(layer => {
+            if (layer.image.complete) {
+                const layerX = -(inputHandler.cameraX * layer.speed) % layer.width;
+                ctx.drawImage(layer.image, layerX, 0, layer.width, layer.height);
+                ctx.drawImage(layer.image, layerX + layer.width, 0, layer.width, layer.height);
+            }
+        });
 
-    config.layers.forEach(layer => {
-        if (layer.width > 0 && layer.image.complete) {
-            const drawY = (canvas.height - layer.height) / 2;
-            let layerX = layer.x - inputHandler.cameraX * layer.speed;
-            while (layerX > layer.width) layerX -= layer.width * 2;
-            while (layerX < -layer.width) layerX += layer.width * 2;
-            ctx.drawImage(layer.image, layerX, drawY, layer.width, layer.height);
-            ctx.drawImage(layer.image, layerX + layer.width, drawY, layer.width, layer.height);
-            ctx.drawImage(layer.image, layerX - layer.width, drawY, layer.width, layer.height);
-        }
-    });
-
-    bearSpawnTimer += deltaTime / 1000;
-    if (bearSpawnTimer >= config.bear.spawnInterval && bears.length < config.bear.maxBears) {
-        bears.push(new Bear(canvas));
-        bearSpawnTimer = 0;
-    }
-
-    bears.forEach((bear, index) => {
-        bear.update(deltaTime);
-        bear.draw(inputHandler.cameraX);
-        if (bear.isJumpedOver(player)) {
-            score += config.player.jumpOverPoints;
-            bear.isFleeing = true;
-            bear.direction = 1;
-            bear.facingRight = true;
-        }
-        if (bear.x > canvas.width * 2 && bear.isFleeing) {
-            bears.splice(index, 1);
-            return;
-        }
-        if (bear.isHit(player) && !bear.isFleeing && !player.jumpID.size) {
-            score = player.takeDamage(10, score);
-            if (player.health <= 0) {
-                gameState = 'gameover';
-                setTimeout(resetGame, 2000);
+        for (let i = trees.length - 1; i >= 0; i--) {
+            const tree = trees[i];
+            tree.update(deltaTime);
+            tree.draw(inputHandler.cameraX);
+            if (tree.x < inputHandler.cameraX - canvas.width) {
+                trees.splice(i, 1);
             }
         }
-    });
 
-    projectiles.forEach((projectile, pIndex) => {
-        projectile.update(deltaTime);
-        projectile.draw(inputHandler.cameraX);
-        if (projectile.lifetime <= 0) {
-            projectiles.splice(pIndex, 1);
-            return;
+        if (trees.length === 0 || trees[trees.length - 1].x < inputHandler.cameraX + canvas.width * 1.5) {
+            spawnTree();
         }
-        bears.forEach((bear, bIndex) => {
-            if (projectile.isHit(bear)) {
-                bears.splice(bIndex, 1);
-                projectiles.splice(pIndex, 1);
-                score += 50;
+        
+        if (gameState === 'forest'){
+            bearSpawnTimer += deltaTime;
+
+            if (bearSpawnTimer >= config.bear.spawnInterval && bears.length < config.bear.maxBears) {
+                const bear = new Bear(canvas);
+                bear.x = bears.length > 0 ? bears.reduce((max, b) => b.x > max.x ? b : max, bears[0]).x + 1200 : inputHandler.cameraX + canvas.width * 1.2;
+                bears.push(bear);
+                bearSpawnTimer = 0;
+            }
+            mooseSpawnTimer += deltaTime;
+            if (mooseSpawnTimer >= config.moose.spawnInterval && moose.length < config.moose.maxMoose) {
+                const mooseObj = new Moose(canvas);
+                mooseObj.x = moose.length > 0 ? moose.reduce((max, m) => m.x > max.x ? m : max, moose[0]).x + 1500 : inputHandler.cameraX + canvas.width * 1.5;
+                moose.push(mooseObj);
+                mooseSpawnTimer = 0;
+            }
+        }
+        
+
+        for (let i = bears.length - 1; i >= 0; i--) {
+            const bear = bears[i];
+            bear.update(deltaTime, player);
+            bear.draw(inputHandler.cameraX);
+            if (bear.isHit(player)) {
+                score = player.takeDamage(config.bear.damage, score, 'bear');
                 try {
                     const bearHitSound = document.getElementById('bearHitSound');
                     bearHitSound.currentTime = 0;
@@ -197,62 +176,228 @@ function gameLoop(timestamp) {
                 } catch (e) {
                     console.warn('Bear hit sound failed:', e);
                 }
-            }
-        });
-    });
-
-    if (gameState === 'forest') {
-        trees.forEach((tree, index) => {
-            tree.draw(inputHandler.cameraX);
-            if (tree.update(deltaTime)) {
-                trees.splice(index, 1);
-                woodCount += 1;
-                const now = timestamp / 1000;
-                if (now - lastChopTime <= config.score.chopInterval) {
-                    chopStreak++;
-                } else {
-                    chopStreak = 1;
-                }
-                lastChopTime = now;
-                const multiplier = config.score.multipliers[Math.min(chopStreak - 1, config.score.multipliers.length - 1)];
-                score += 10 * multiplier;
-                if (trees.length < 3) {
-                    spawnTree();
+                if (player.health <= 0) {
+                    gameState = 'gameover';
+                    setTimeout(resetGame, 2000);
                 }
             }
-        });
-    }
+            if (bear.isJumpedOver(player)) {
+                score += config.player.jumpOverPoints;
+                bears.splice(i, 1);
+                try {
+                    const jumpSound = document.getElementById('jumpSound');
+                    jumpSound.currentTime = 0;
+                    jumpSound.play();
+                } catch (e) {
+                    console.warn('Jump sound failed:', e);
+                }
+                continue;
+            }
+            if (bear.x < inputHandler.cameraX - canvas.width) {
+                bears.splice(i, 1);
+            }
+        }
 
-    if (gameState !== 'gameover') {
+        
+
+        for (let i = moose.length - 1; i >= 0; i--) {
+            const m = moose[i];
+            m.update(deltaTime, player);
+            m.draw(inputHandler.cameraX);
+            if (m.isHit(player)) {
+                score = player.takeDamage(config.moose.damage, score, 'moose');
+                try {
+                    const mooseHitSound = document.getElementById('mooseHitSound');
+                    mooseHitSound.currentTime = 0;
+                    mooseHitSound.play();
+                } catch (e) {
+                    console.warn('Moose hit sound failed:', e);
+                }
+                if (player.health <= 0) {
+                    gameState = 'gameover';
+                    setTimeout(resetGame, 2000);
+                }
+            }
+            if (m.isJumpedOver(player)) {
+                score += config.player.jumpOverPoints;
+                moose.splice(i, 1);
+                try {
+                    const jumpSound = document.getElementById('jumpSound');
+                    jumpSound.currentTime = 0;
+                    jumpSound.play();
+                } catch (e) {
+                    console.warn('Jump sound failed:', e);
+                }
+                continue;
+            }
+            if (m.x < inputHandler.cameraX - canvas.width) {
+                moose.splice(i, 1);
+            }
+        }
+
+        if (player.attackTimer > 0 && projectiles.length === 0) {
+            const projectileY = player.y + player.height / 2 - config.projectile.height / 2;
+            projectiles.push(new Projectile(player.x, projectileY, player.facingRight));
+            try {
+                const attackSound = document.getElementById('attackSound');
+                attackSound.currentTime = 0;
+                attackSound.play();
+            } catch (e) {
+                console.warn('Attack sound failed:', e);
+            }
+        }
+        for (let i = projectiles.length - 1; i >= 0; i--) {
+            const p = projectiles[i];
+            p.update(deltaTime);
+            p.draw(inputHandler.cameraX);
+            if (p.lifetime <= 0) {
+                projectiles.splice(i, 1);
+                continue;
+            }
+            for (let j = bears.length - 1; j >= 0; j--) {
+                if (p.isHit(bears[j])) {
+                    bears.splice(j, 1);
+                    projectiles.splice(i, 1);
+                    score += 50;
+                    try {
+                        const bearHitSound = document.getElementById('bearHitSound');
+                        bearHitSound.currentTime = 0;
+                        bearHitSound.play();
+                    } catch (e) {
+                        console.warn('Bear hit sound failed:', e);
+                    }
+                    break;
+                }
+            }
+            for (let j = moose.length - 1; j >= 0; j--) {
+                if (p.isHit(moose[j])) {
+                    moose.splice(j, 1);
+                    projectiles.splice(i, 1);
+                    score += 50;
+                    try {
+                        const mooseHitSound = document.getElementById('mooseHitSound');
+                        mooseHitSound.currentTime = 0;
+                        mooseHitSound.play();
+                    } catch (e) {
+                        console.warn('Moose hit sound failed:', e);
+                    }
+                    break;
+                }
+            }
+        }
+        
         player.draw(inputHandler.cameraX);
         drawUI();
-    } else {
-        ctx.fillStyle = 'black';
-        ctx.font = '48px Arial';
-        ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
-        ctx.font = '24px Arial';
-        ctx.fillText('Game starts again in 2 seconds...', canvas.width / 2 - 150, canvas.height / 2 + 40);
-    }
 
-    if (player.attackTimer > 0 && projectiles.length === 0) {
-        const projectileY = player.y + player.height / 2 - config.projectile.height / 2;
-        projectiles.push(new Projectile(player.x, projectileY, player.facingRight));
-    }
+        if (woodCount >= config.score.victoryWood) {
+            gameState = 'victory';
+            ctx.fillStyle = 'black';
+            ctx.font = '40px Arial';
+            ctx.fillText('Now we can go to sauna and drink beer!', canvas.width / 2 - 200, canvas.height / 2);
+            showVictoryVideo();
+            return;
+        }
 
+        if (gameState === 'gameover') {
+            ctx.fillStyle = 'black';
+            ctx.font = '40px Arial';
+            ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
+            setTimeout(resetGame, 2000);
+            return;
+        }
+        
+    } catch (e) {
+        console.error('Game loop error:', e);
+    }
     requestAnimationFrame(gameLoop);
 }
 
+const videoContainer = document.getElementById('videocontainer');
+const victoryvideo = document.getElementById('victoryvideo');
+const endScreen = document.getElementById('endscreen');
+const restartButton = document.getElementById('restartbutton');
+function showVictoryVideo() {
+    flashScreen(() => {
+        canvas.classList.add('hidden');
+        videoContainer.classList.remove('hidden');
+        victoryvideo.play();
+    });
+    
+}
+
+victoryvideo.addEventListener('ended', () => {
+    flashScreen(() => {
+        videoContainer.classList.add('hidden');
+        endScreen.classList.remove('hidden');
+    });
+    
+});
+
+restartButton.addEventListener('click', () => {
+    gameState = 'gamestart';
+    if (gameState === 'gamestart') {
+        flashScreen(() => {
+            endScreen.classList.add('hidden');
+            startscreen.classList.remove('hidden');
+        });
+        
+    }
+});
+
+
+
 let loadedImages = 0;
 config.layers.forEach(layer => {
+    layer.image = new Image();
+    layer.image.src = layer.src;
+    layer.image.onerror = () => console.warn(`Failed to load layer: ${layer.src}`);
     layer.image.onload = () => {
-        layer.width = layer.image.naturalWidth;
-        layer.height = layer.image.naturalHeight;
+        layer.width = layer.image.width;
+        layer.height = layer.image.height;
         loadedImages++;
         if (loadedImages === config.layers.length) {
-            gameLoop(0);
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            player = new Player(canvas);
+            inputHandler = new InputHandler(player, canvas);
+            resetGame();
+            document.addEventListener('keydown', e => {
+                if (e.key.toLowerCase() === 'f') {
+                    for (let tree of trees) {
+                        if (tree.isHit(player)) {
+                            tree.startChopping(player);
+                            break;
+                        }
+                    }
+                }
+            });
+            document.addEventListener('keyup', e => {
+                if (e.key.toLowerCase() === 'f') {
+                    for (let tree of trees) {
+                        tree.stopChopping();
+                    }
+                }
+            });
+            requestAnimationFrame(gameLoop);
         }
     };
-    layer.image.onerror = () => {
-        console.error(`Failed to load image: ${layer.src}`);
-    };
 });
+function flashScreen(callback) {
+    const flash = document.getElementById('screenflash');
+
+    flash.classList.remove('hidden');
+
+    void flash.offsetWidth;
+
+    flash.classList.add('show');
+
+    setTimeout(() => {
+        if (typeof callback === 'function') callback();
+
+        flash.classList.remove('show');
+        
+        setTimeout(() => {
+            flash.classList.add('hidden');
+        }, 500);
+    }, 500);
+}
