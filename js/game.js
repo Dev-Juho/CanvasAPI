@@ -1,8 +1,23 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let player, inputHandler, trees = [], bears = [], moose = [], projectiles = [], woodCount = 0, score = 0, gameState = 'forest';
+let player, inputHandler, trees = [], bears = [], moose = [], projectiles = [], woodCount = 0, score = 0
 let lastTime = 0, bearSpawnTimer = 0, mooseSpawnTimer = 0, lastChopTime = 0;
+let gameState = 'gamestart';
 
+const startscreen = document.getElementById('startscreen');
+const startbutton = document.getElementById('startbutton');
+
+startbutton.addEventListener('click', () => {
+    gameState = 'forest';
+    flashScreen(() => {
+        startscreen.classList.add('hidden');
+        canvas.classList.remove('hidden');
+        
+        resetGame();
+        requestAnimationFrame(gameLoop);
+    });
+    
+});
 class Projectile {
     constructor(x, y, facingRight) {
         this.x = x;
@@ -74,7 +89,6 @@ function resetGame() {
         inputHandler.cameraX = 0;
         bearSpawnTimer = 0;
         mooseSpawnTimer = 0;
-        gameState = 'forest';
     } catch (e) {
         console.error('Reset game error:', e);
     }
@@ -129,14 +143,25 @@ function gameLoop(timestamp) {
         if (trees.length === 0 || trees[trees.length - 1].x < inputHandler.cameraX + canvas.width * 1.5) {
             spawnTree();
         }
+        
+        if (gameState === 'forest'){
+            bearSpawnTimer += deltaTime;
 
-        bearSpawnTimer += deltaTime;
-        if (bearSpawnTimer >= config.bear.spawnInterval && bears.length < config.bear.maxBears) {
-            const bear = new Bear(canvas);
-            bear.x = bears.length > 0 ? bears.reduce((max, b) => b.x > max.x ? b : max, bears[0]).x + 1200 : inputHandler.cameraX + canvas.width * 1.2;
-            bears.push(bear);
-            bearSpawnTimer = 0;
+            if (bearSpawnTimer >= config.bear.spawnInterval && bears.length < config.bear.maxBears) {
+                const bear = new Bear(canvas);
+                bear.x = bears.length > 0 ? bears.reduce((max, b) => b.x > max.x ? b : max, bears[0]).x + 1200 : inputHandler.cameraX + canvas.width * 1.2;
+                bears.push(bear);
+                bearSpawnTimer = 0;
+            }
+            mooseSpawnTimer += deltaTime;
+            if (mooseSpawnTimer >= config.moose.spawnInterval && moose.length < config.moose.maxMoose) {
+                const mooseObj = new Moose(canvas);
+                mooseObj.x = moose.length > 0 ? moose.reduce((max, m) => m.x > max.x ? m : max, moose[0]).x + 1500 : inputHandler.cameraX + canvas.width * 1.5;
+                moose.push(mooseObj);
+                mooseSpawnTimer = 0;
+            }
         }
+        
 
         for (let i = bears.length - 1; i >= 0; i--) {
             const bear = bears[i];
@@ -173,13 +198,7 @@ function gameLoop(timestamp) {
             }
         }
 
-        mooseSpawnTimer += deltaTime;
-        if (mooseSpawnTimer >= config.moose.spawnInterval && moose.length < config.moose.maxMoose) {
-            const mooseObj = new Moose(canvas);
-            mooseObj.x = moose.length > 0 ? moose.reduce((max, m) => m.x > max.x ? m : max, moose[0]).x + 1500 : inputHandler.cameraX + canvas.width * 1.5;
-            moose.push(mooseObj);
-            mooseSpawnTimer = 0;
-        }
+        
 
         for (let i = moose.length - 1; i >= 0; i--) {
             const m = moose[i];
@@ -266,7 +285,7 @@ function gameLoop(timestamp) {
                 }
             }
         }
-
+        
         player.draw(inputHandler.cameraX);
         drawUI();
 
@@ -275,7 +294,7 @@ function gameLoop(timestamp) {
             ctx.fillStyle = 'black';
             ctx.font = '40px Arial';
             ctx.fillText('Now we can go to sauna and drink beer!', canvas.width / 2 - 200, canvas.height / 2);
-            setTimeout(resetGame, 3000);
+            showVictoryVideo();
             return;
         }
 
@@ -286,11 +305,46 @@ function gameLoop(timestamp) {
             setTimeout(resetGame, 2000);
             return;
         }
+        
     } catch (e) {
         console.error('Game loop error:', e);
     }
     requestAnimationFrame(gameLoop);
 }
+
+const videoContainer = document.getElementById('videocontainer');
+const victoryvideo = document.getElementById('victoryvideo');
+const endScreen = document.getElementById('endscreen');
+const restartButton = document.getElementById('restartbutton');
+function showVictoryVideo() {
+    flashScreen(() => {
+        canvas.classList.add('hidden');
+        videoContainer.classList.remove('hidden');
+        victoryvideo.play();
+    });
+    
+}
+
+victoryvideo.addEventListener('ended', () => {
+    flashScreen(() => {
+        videoContainer.classList.add('hidden');
+        endScreen.classList.remove('hidden');
+    });
+    
+});
+
+restartButton.addEventListener('click', () => {
+    gameState = 'gamestart';
+    if (gameState === 'gamestart') {
+        flashScreen(() => {
+            endScreen.classList.add('hidden');
+            startscreen.classList.remove('hidden');
+        });
+        
+    }
+});
+
+
 
 let loadedImages = 0;
 config.layers.forEach(layer => {
@@ -328,3 +382,22 @@ config.layers.forEach(layer => {
         }
     };
 });
+function flashScreen(callback) {
+    const flash = document.getElementById('screenflash');
+
+    flash.classList.remove('hidden');
+
+    void flash.offsetWidth;
+
+    flash.classList.add('show');
+
+    setTimeout(() => {
+        if (typeof callback === 'function') callback();
+
+        flash.classList.remove('show');
+        
+        setTimeout(() => {
+            flash.classList.add('hidden');
+        }, 500);
+    }, 500);
+}

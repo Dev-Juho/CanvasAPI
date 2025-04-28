@@ -7,12 +7,57 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <canvas id="gameCanvas">Your browser does not support canvas.</canvas>
+
+    <div id="startscreen" class="">
+        <img src="assets/Startscreen.jpg" alt="Finnish Adventure" id="startimg">
+        <h1 id="title">Finnish Adventure</h1>
+        <div id="goal">
+            <h2>Goal</h2>
+            <p>Gather 100 wood <br>
+                Get the beer can <br>
+                Collect the sauna trophy
+            </p>
+        </div>
+        <div id="controls">
+            <h2>Controls</h2>
+            <p>W / Space = Jump <br>
+                A / Left Arrow = Move left <br>
+                S / Down Arrow = Crouch <br>
+                D / Right Arrow = Move right <br><br>
+                F = Chop tree <br>
+                G = Shoot <br>
+            </p>
+        </div>
+        <br>
+        <button id="startbutton">Start game</button>
+ 
+    </div>
+
+    <canvas id="gameCanvas" class="hidden">Your browser does not support canvas.</canvas>
+
     <audio id="jumpSound" src="assets/pomppu.mp3" preload="auto"></audio>
     <audio id="chopSound" src="assets/chop.mp3" preload="auto"></audio>
     <audio id="attackSound" src="assets/attack.mp3" preload="auto"></audio>
     <audio id="bearHitSound" src="assets/bear_hit.mp3" preload="auto"></audio>
     <audio id="mooseHitSound" src="assets/moose_hit.mp3" preload="auto"></audio>
+
+    <div id="videocontainer" class="hidden">
+        <video id="victoryvideo">
+            <source src="assets/Victoryvid.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <div id="endscreen" class="hidden">
+        <img src="assets/Endscreen.jpg" alt="Thanks for playing!" id="endimg">
+        <br>
+        <button id="restartbutton">Restart game</button>
+    </div>
+
+    <div id="screenflash" class="hidden">
+
+    </div>
+
     <script src="js/config.js" onerror="console.warn('Script failed: config.js')"></script>
     <script src="js/player.js" onerror="console.warn('Script failed: player.js')"></script>
     <script src="js/tree.js" onerror="console.warn('Script failed: tree.js')"></script>
